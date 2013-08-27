@@ -1,4 +1,6 @@
 /**
+ * Calculate log-sum-exp robustly.
+ * 
  * @param a vector of numbers.
  * @return log(sum[i=1..n](exp(ai))) = 
  *         m + log(sum[i=1..n](exp(ai-m)))

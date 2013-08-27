@@ -59,6 +59,8 @@ LanguageModel.prototype = {
 				(1-this.smoothingCoefficient) * this.mapWordToTotalCount[word] / this.mapWordToTotalCount["_total"];
 		}
 		this.mapWordToSmoothingFactor = mapWordToSmoothingFactor;
+		
+		this.globalSmoothingFactor = 0; //(1/totalNumberOfWordsInDataset)  // a global smoother, for totally unseen words.
 	},
 	
 	/**
@@ -80,7 +82,7 @@ LanguageModel.prototype = {
 		}
 		var logSentenceLikelihood = logSumExp(logProducts);
 		
-		return logSentenceLikelihood - Math.log(this.dataset.length);
+		return logSentenceLikelihood - Math.log(this.dataset.length); // The last element is not needed in practice (see eq. (5))
 	},
 
 	/**
@@ -107,9 +109,12 @@ LanguageModel.prototype = {
 				    map(function(key){return givenSentenceCounts[key]}).
 				    reduce(function(memo, num){ return memo + num; }, 0));
 
-		var prob = (word in givenSentenceCounts? 
-				this.smoothingCoefficient     * givenSentenceCounts[word] / totalGivenSentenceCounts +      this.mapWordToSmoothingFactor[word]:
-				this.mapWordToSmoothingFactor[word]);
+		var prob = (
+			word in givenSentenceCounts? 
+				this.smoothingCoefficient     * givenSentenceCounts[word] / totalGivenSentenceCounts + this.mapWordToSmoothingFactor[word] + this.globalSmoothingFactor:
+			word in this.mapWordToSmoothingFactor? 
+				this.mapWordToSmoothingFactor[word] + this.globalSmoothingFactor:
+				this.globalSmoothingFactor);
 		if (isNaN(prob)) {
 			console.log(util.inspect(this,{depth:3}));
 			throw new Error("logProbWordGivenSentence("+word+", "+JSON.stringify(givenSentenceCounts)+") is NaN!");
@@ -118,12 +123,6 @@ LanguageModel.prototype = {
 	},
 }
 
-
-
-
-/*
- * UTILITY FUNCTIONS
- */
 
 module.exports = LanguageModel;
 
@@ -136,16 +135,26 @@ if (process.argv[1] === __filename) {
 		smoothingFactor : 0.9,
 	});
 
+	var wordcounts = require('./wordcounts');
+	
 	model.trainBatch([
-		{"I":1,"offer":1,"a":1,"salary":1,"of":1,"20000":1},
-		{"I":1,"offer":1,"a":1,"salary":1,"of":1,"7000":1},
-		{"I":1,"offer":1,"a":2,"car":1,"and":1,"pension":1},
+		wordcounts("I want aa"),
+		wordcounts("I want bb"),
+		wordcounts("I want cc")
 	    ]);
 
-	console.log(model.logProbSentenceGivenDataset(
-			{"I":1,"offer":1,"a":1,"salary":1,"of":1,"20000":1,"and":1,"car":1}
-			));                  
+	var assertProbSentence = function(sentence, expected) {
+		var p = Math.exp(model.logProbSentenceGivenDataset(wordcounts(sentence)));
+		if (Math.abs(p-expected)/expected>0.01) {
+			console.warn("p("+sentence+") = "+Math.exp(model.logProbSentenceGivenDataset(wordcounts(sentence))), " should be "+expected);
+		}
+	}
 
+	assertProbSentence("I", 1/3);
+	assertProbSentence("I want", 1/9);
+	assertProbSentence("I want aa", 0.0123456);
+	assertProbSentence("I want aa bb",0.00026);
+	assertProbSentence("I want aa bb cc",0.00000427);
 	
 	console.log("LanguageModel.js demo end");
 }

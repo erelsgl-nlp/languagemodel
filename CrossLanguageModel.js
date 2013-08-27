@@ -1,5 +1,5 @@
-var logSumExp = require('./logSumExp');
 var LanguageModel = require('./LanguageModel');
+var logSumExp = require('./logSumExp');
 
 
 /**
@@ -90,7 +90,7 @@ CrossLanguageModel.prototype = {
 	 */
 	divergence: function(inputSentenceCounts, outputSentenceCounts) {         // (6)   D(P(W)||P(F)) = ...
 		var elements = [];
-		for (var feature in outputSentenceCounts) {
+		for (var feature in this.outputLanguageModel.getAllWordCounts()) {
 			if (feature=='_total') continue;
 			var logFeatureGivenInput  = this.logProbFeatureGivenSentence(feature, inputSentenceCounts);
 			if (isNaN(logFeatureGivenInput)||!isFinite(logFeatureGivenInput)) throw new Error("logFeatureGivenInput is "+logFeatureGivenInput);
@@ -99,7 +99,7 @@ CrossLanguageModel.prototype = {
 			var probFeatureGivenInput = Math.exp(logFeatureGivenInput);
 			var element = probFeatureGivenInput * (logFeatureGivenInput - logFeatureGivenOutput);
 			if (isNaN(element)||!isFinite(element)) throw new Error(probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
-			console.log(probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
+			//console.log("\t(6) "+feature+": "+probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
 			elements.push(element)
 		}
 		//console.dir(elements);
@@ -111,10 +111,13 @@ CrossLanguageModel.prototype = {
 	 * @param givenSentenceCounts a hash that represents a sentence from the INPUT domain.
 	 */
 	logProbFeatureGivenSentence: function(feature, givenSentenceCounts) {  // (5) P(f|W) = ...
+		if (!givenSentenceCounts)
+			throw new Error("no givenSentenceCounts");
 		var logSentenceAndFeature = this.logProbSentenceAndFeatureGivenDataset(feature,givenSentenceCounts);
 		if (isNaN(logSentenceAndFeature)||!isFinite(logSentenceAndFeature)) throw new Error("logSentenceAndFeature is "+logSentenceAndFeature);
 		var logSentence = this.inputLanguageModel.logProbSentenceGivenDataset(givenSentenceCounts);
 		if (isNaN(logSentence)||!isFinite(logSentence)) throw new Error("logSentence is "+logSentence);
+		//console.log("\t\t(5) "+feature+": "+Math.exp(logSentenceAndFeature)*81+" / "+Math.exp(logSentence)*81+" = "+Math.exp((logSentenceAndFeature - logSentence)));
 		return logSentenceAndFeature - logSentence;
 	},
 	
@@ -123,6 +126,8 @@ CrossLanguageModel.prototype = {
 	 * @param sentenceCounts a hash that represents a sentence from the INPUT domain.
 	 */
 	logProbSentenceAndFeatureGivenDataset: function(feature, sentenceCounts) {  // (2') log P(f,w1...wn) = ...
+		if (!sentenceCounts)
+			throw new Error("no sentenceCounts");
 		var logProducts = [];
 		for (var i in this.dataset) {
 			var datum = this.dataset[i];
@@ -134,54 +139,15 @@ CrossLanguageModel.prototype = {
 		//console.dir(logProducts);
 		var logSentenceLikelihood = logSumExp(logProducts);
 		
-		return logSentenceLikelihood - Math.log(this.inputLanguageModel.dataset.length);
+		return logSentenceLikelihood - Math.log(this.inputLanguageModel.dataset.length); // The last element is not needed in practice (see eq. (5))
 	},
 }
 
 
 
-
-/*
- * UTILITY FUNCTIONS
- */
-
-
-/**
- * @return log(exp(a)+exp(b)) 
- * @note handles large numbers robustly.        
- */
-function logSumExp(a, b) {
-	if (a>b) {
-		if (b-a>-10)
-			return a + Math.log(1+Math.exp(b-a));
-		else
-			return a;
-	} else {
-		if (a-b>-10)
-			return b + Math.log(1+Math.exp(a-b));
-		else
-			return b;
-	}
-}
-
-
-/**
- * @param a vector of numbers.
- * @return log(sum[i=1..n](exp(ai))) = 
- *         m + log(sum[i=1..n](exp(ai-m)))
- * Where m = max[i=1..n](ai)
- * @note handles large numbers robustly.        
- */
-function logSumExp(a) {
-	var m = Math.max.apply(null,a);
-	var sum = 0;
-	for (var i=0; i<a.length; ++i)
-		if (a[i]>m-10)
-			sum += Math.exp(a[i]-m);
-	return m + Math.log(sum);
-}
-
 module.exports = CrossLanguageModel;
+
+
 
 if (process.argv[1] === __filename) {
 	console.log("CrossLanguageModel demo start");
@@ -190,29 +156,44 @@ if (process.argv[1] === __filename) {
 		smoothingFactor : 0.9,
 	});
 	
-	function wordcounts(sentence) {
-		return sentence.split(' ').reduce(function(counts, word) {
-		    counts[word] = (counts[word] || 0) + 1;
-		    return counts;
-		  }, {});
-	}
+	var wordcounts = require('./wordcounts');
 	
 	classifier.trainBatch([
 		{input: wordcounts("I want aa"), output: wordcounts("a")},
 		{input: wordcounts("I want bb"), output: wordcounts("b")},
 		{input: wordcounts("I want cc"), output: wordcounts("c")},
 	    ]);
-	
-	var test = function(sentence) {
-		console.log(sentence+": ");
-		console.log(classifier.similarities(wordcounts(sentence)));
+
+	var assertProbSentence = function(actual, expected) {
+		if (Math.abs(actual-expected)/expected>0.01) {
+			console.warn("Received "+actual+" but expected "+expected);
+		}
 	}
 	
-	//test("I want");
-	test("I want aa");
-	//test("I want bb");
-	test("I want aa bb");
-	//test("I want aa bb cc");
+	assertProbSentence(Math.exp(classifier.inputLanguageModel.logProbSentenceGivenDataset(wordcounts("I want"))), 1/9);
+	assertProbSentence(Math.exp(classifier.logProbSentenceAndFeatureGivenDataset("a",wordcounts("I want"))), 0.037);
+	assertProbSentence(Math.exp(classifier.logProbFeatureGivenSentence("a",wordcounts("I want"))), 1/3);
+	assertProbSentence(Math.exp(classifier.inputLanguageModel.logProbSentenceGivenDataset(wordcounts("I want aa bb cc"))),0.00000426);
+	assertProbSentence(Math.exp(classifier.logProbSentenceAndFeatureGivenDataset("a",wordcounts("I want aa bb cc"))),0.00000142);
+	assertProbSentence(Math.exp(classifier.logProbFeatureGivenSentence("a",wordcounts("I want aa bb cc"))),1/3);
+	
+	var show = function(sentence) {
+		console.log(sentence+": ");
+		console.log(classifier.similarities(wordcounts(sentence)).map(function(sim) {
+			var output = "";
+			for (f in sim.output)
+				if (f!='_total')
+					output += (f+" ");
+			return {output:output, divergence:-sim.similarity};
+		}));
+	}
+	show("I want");
+	//show("I want nothing");
+	show("I want aa");
+	show("I want bb");
+	//show("I want aa and bb");
+	//show("I want aa , bb and cc");
+	show("I want aa bb cc");
 	
 	
 	console.log("CrossLanguageModel demo end");
