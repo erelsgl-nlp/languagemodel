@@ -170,29 +170,23 @@ if (process.argv[1] === __filename) {
 		}
 	}
 	
-	assertProbSentence(Math.exp(classifier.inputLanguageModel.logProbSentenceGivenDataset(wordcounts("I want"))), 1/9);
-	assertProbSentence(Math.exp(classifier.logProbSentenceAndFeatureGivenDataset("a",wordcounts("I want"))), 0.037);
-	assertProbSentence(Math.exp(classifier.logProbFeatureGivenSentence("a",wordcounts("I want"))), 1/3);
-	assertProbSentence(Math.exp(classifier.inputLanguageModel.logProbSentenceGivenDataset(wordcounts("I want aa bb cc"))),0.00000426);
-	assertProbSentence(Math.exp(classifier.logProbSentenceAndFeatureGivenDataset("a",wordcounts("I want aa bb cc"))),0.00000142);
-	assertProbSentence(Math.exp(classifier.logProbFeatureGivenSentence("a",wordcounts("I want aa bb cc"))),1/3);
-	
 	var show = function(sentence) {
 		console.log(sentence+": ");
-		console.log(classifier.similarities(wordcounts(sentence)).map(function(sim) {
-			var output = "";
-			for (f in sim.output)
-				if (f!='_total')
-					output += (f+" ");
-			return {output:output, divergence:-sim.similarity};
-		}));
+		console.dir(classifier.similarities(wordcounts(sentence)));
+//		console.log(classifier.similarities(wordcounts(sentence)).map(function(sim) {
+//			var output = "";
+//			for (f in sim.output)
+//				if (f!='_total')
+//					output += (f+" ");
+//			return {output:output, divergence:-sim.similarity};
+//		}));
 	}
 	show("I want");
-	//show("I want nothing");
+	show("I want nothing");
 	show("I want aa");
 	show("I want bb");
-	//show("I want aa and bb");
-	//show("I want aa , bb and cc");
+	show("I want aa and bb");
+	show("I want aa , bb and cc");
 	show("I want aa bb cc");
 	
 	
