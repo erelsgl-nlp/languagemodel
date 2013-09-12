@@ -60,7 +60,7 @@ LanguageModel.prototype = {
 		}
 		this.mapWordToSmoothingFactor = mapWordToSmoothingFactor;
 		
-		this.globalSmoothingFactor = 0; //(1/totalNumberOfWordsInDataset)  // a global smoother, for totally unseen words.
+		this.globalSmoothingFactor = (1/totalNumberOfWordsInDataset)  // a global smoother, for totally unseen words.
 	},
 	
 	/**
