@@ -7,7 +7,7 @@
         "type": "git",
         "url": "https://github.com/erelsgl/languagemodel.git"
     },
-    "main": "./CrossLanguageModel.js",
+    "main": "./index.js",
     "dependencies" : {  },
     "devDependencies" : { },
     "keywords": ["natural language", "natural", "language model"]

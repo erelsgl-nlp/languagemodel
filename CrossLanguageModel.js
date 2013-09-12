@@ -1,6 +1,7 @@
 var LanguageModel = require('./LanguageModel');
 var logSumExp = require('./logSumExp');
 
+var extend = require('util')._extend;
 
 /**
  * This class represents a model for two different languages - input language and output language.
@@ -24,7 +25,7 @@ var CrossLanguageModel = function(opts) {
 CrossLanguageModel.prototype = {
 
 	/**
-	 * Tell the classifier that the given sample belongs to the given classes.
+	 * Tell the model that the given sample belongs to the given classes.
 	 * 
 	 * @param sample
 	 *            a document.
@@ -36,7 +37,7 @@ CrossLanguageModel.prototype = {
 	},
 
 	/**
-	 * Train the classifier with all the given documents.
+	 * Train the model with all the given documents.
 	 * 
 	 * @param dataset
 	 *            an array with objects of the format: 
@@ -47,31 +48,35 @@ CrossLanguageModel.prototype = {
 		this.outputLanguageModel.trainBatch(dataset.map(function(datum) {return datum.output;}));
 		this.dataset = dataset;
 	},
+
+	/**
+	 * Train the model with all the given documents.
+	 * 
+	 * @param dataset
+	 *            an array with objects of the format: 
+	 *            {input: {feature1:count1, feature2:count2,...}, output: {feature1:count1, feature2:count2,...}}
+	 */
+	trainOnline: function(input, output) {
+		throw new Error("CrossLanguageModel currently does not support online training");
+	},
 	
 	getAllWordCounts: function() {
 		return this.mapWordToTotalCount;
 	},
-
-	/**
-	 * Use the model trained so far to classify a new sample.
-	 * 
-	 * @param segment a part of a text sentence.
-	 * @param explain - int - if positive, an "explanation" field, with the given length, will be added to the result.
-	 *  
-	 * @return an array whose VALUES are classes.
-	 */
-	classify: function(sentence, explain) {
-		
-	},
 	
 	/**
-	 * Calculate the similarity scores (minus-divergences) between the given input sentence and all output sentences in the corpus, sorted from high (most similar) to low (least similar). 
+	 * Calculate the similarity scores between the given input sentence and all output sentences in the corpus, sorted from high (most similar) to low (least similar).
+	 *  Note: similarity = - divergence 
 	 */
 	similarities: function(inputSentenceCounts) {
 		var sims = [];
 		for (var i in this.dataset) {
-			var output = this.dataset[i].output;
-			sims.push({output: output, similarity:  -this.divergence(inputSentenceCounts, output)});
+			var output = extend({}, this.dataset[i].output);
+			delete output['_total'];
+			sims.push({
+				output: output, 
+				similarity:  -this.divergence(inputSentenceCounts, output)
+			});
 		}
 		sims.sort(function(a,b) {
 			return b.similarity-a.similarity;
@@ -105,7 +110,7 @@ CrossLanguageModel.prototype = {
 		//console.dir(elements);
 		return elements.reduce(function(memo, num){ return memo + num; }, 0);
 	},
-	
+
 	/**
 	 * @param feature a single feature (-word) from the OUTPUT domain.
 	 * @param givenSentenceCounts a hash that represents a sentence from the INPUT domain.
@@ -152,17 +157,17 @@ module.exports = CrossLanguageModel;
 if (process.argv[1] === __filename) {
 	console.log("CrossLanguageModel demo start");
 	
-	var classifier = new CrossLanguageModel({
+	var model = new CrossLanguageModel({
 		smoothingFactor : 0.9,
 	});
 	
 	var wordcounts = require('./wordcounts');
 	
-	classifier.trainBatch([
+	model.trainBatch([
 		{input: wordcounts("I want aa"), output: wordcounts("a")},
 		{input: wordcounts("I want bb"), output: wordcounts("b")},
 		{input: wordcounts("I want cc"), output: wordcounts("c")},
-	    ]);
+		]);
 
 	var assertProbSentence = function(actual, expected) {
 		if (Math.abs(actual-expected)/expected>0.01) {
@@ -172,8 +177,8 @@ if (process.argv[1] === __filename) {
 	
 	var show = function(sentence) {
 		console.log(sentence+": ");
-		console.dir(classifier.similarities(wordcounts(sentence)));
-//		console.log(classifier.similarities(wordcounts(sentence)).map(function(sim) {
+		console.dir(model.similarities(wordcounts(sentence)));
+//		console.log(model.similarities(wordcounts(sentence)).map(function(sim) {
 //			var output = "";
 //			for (f in sim.output)
 //				if (f!='_total')
