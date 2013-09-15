@@ -32,7 +32,7 @@ CrossLanguageModel.prototype = {
 	 * @param classes
 	 *            an object whose KEYS are classes, or an array whose VALUES are classes.
 	 */
-	trainOnline: function(sample, classes) {
+	trainOnline: function(features, labels) {
 		throw new Error("CrossLanguageModel does not support online training");
 	},
 
@@ -46,7 +46,6 @@ CrossLanguageModel.prototype = {
 	trainBatch : function(dataset) {
 		this.inputLanguageModel.trainBatch(dataset.map(function(datum) {return datum.input;}));
 		this.outputLanguageModel.trainBatch(dataset.map(function(datum) {return datum.output;}));
-		this.dataset = dataset;
 	},
 
 	/**
@@ -65,36 +64,20 @@ CrossLanguageModel.prototype = {
 	},
 	
 	/**
-	 * Calculate the similarity scores between the given input sentence and all output sentences in the corpus, sorted from high (most similar) to low (least similar).
-	 *  Note: similarity = - divergence 
-	 */
-	similarities: function(inputSentenceCounts) {
-		var sims = [];
-		for (var i in this.dataset) {
-			var output = extend({}, this.dataset[i].output);
-			delete output['_total'];
-			sims.push({
-				output: output, 
-				similarity:  -this.divergence(inputSentenceCounts, output)
-			});
-		}
-		sims.sort(function(a,b) {
-			return b.similarity-a.similarity;
-		});
-		return sims;
-	},
-	
-	/**
 	 * Calculate the Kullback-Leibler divergence between the language models of the given samples.
 	 * This can be used as an approximation of the (inverse) semantic similarity. between them. 
 	 *
-	 * @param inputSentenceCounts hash that represents a sentence from the INPUT domain.
-	 * @param outputSentenceCounts hash that represents a sentence from the OUTPUT domain.
+	 * @param inputSentenceCounts (hash) represents a sentence from the INPUT domain.
+	 * @param outputSentenceCounts (hash) represents a sentence from the OUTPUT domain.
 	 * 
 	 * @note divergence is not symmetric - divergence(a,b) != divergence(b,a).
 	 */
 	divergence: function(inputSentenceCounts, outputSentenceCounts) {         // (6)   D(P(W)||P(F)) = ...
 		var elements = [];
+		if (inputSentenceCounts!==Object(inputSentenceCounts))
+			throw new Error("expected inputSentenceCounts to be an object, but found "+JSON.stringify(inputSentenceCounts));
+		if (outputSentenceCounts!==Object(outputSentenceCounts))
+			throw new Error("expected outputSentenceCounts to be an object, but found "+JSON.stringify(outputSentenceCounts));
 		for (var feature in this.outputLanguageModel.getAllWordCounts()) {
 			if (feature=='_total') continue;
 			var logFeatureGivenInput  = this.logProbFeatureGivenSentence(feature, inputSentenceCounts);
@@ -109,6 +92,26 @@ CrossLanguageModel.prototype = {
 		}
 		//console.dir(elements);
 		return elements.reduce(function(memo, num){ return memo + num; }, 0);
+	},
+	
+	/**
+	 * Calculate the similarity scores between the given input sentence and all output sentences in the corpus, sorted from high (most similar) to low (least similar).
+	 *  Note: similarity = - divergence 
+	 */
+	similarities: function(inputSentenceCounts) {
+		var sims = [];
+		for (var i in this.outputLanguageModel.dataset) {
+			var output = extend({}, this.outputLanguageModel.dataset[i]);
+			delete output['_total'];
+			sims.push({
+				output: output, 
+				similarity:  -this.divergence(inputSentenceCounts, output)
+			});
+		}
+		sims.sort(function(a,b) {
+			return b.similarity-a.similarity;
+		});
+		return sims;
 	},
 
 	/**
@@ -129,23 +132,34 @@ CrossLanguageModel.prototype = {
 	/**
 	 * @param feature a single feature (-word) from the OUTPUT domain.
 	 * @param sentenceCounts a hash that represents a sentence from the INPUT domain.
+	 * @return the joint probability of the output feature and the input sentence.
 	 */
 	logProbSentenceAndFeatureGivenDataset: function(feature, sentenceCounts) {  // (2') log P(f,w1...wn) = ...
 		if (!sentenceCounts)
 			throw new Error("no sentenceCounts");
 		var logProducts = [];
-		for (var i in this.dataset) {
-			var datum = this.dataset[i];
+		for (var i = 0; i<this.inputLanguageModel.dataset.length; ++i) {
 			logProducts.push(
-				this.inputLanguageModel .logProbSentenceGivenSentence(sentenceCounts, datum.input) +
-				this.outputLanguageModel.logProbWordGivenSentence(feature, datum.output)
+				this.inputLanguageModel .logProbSentenceGivenSentence(sentenceCounts, this.inputLanguageModel.dataset[i]) +
+				this.outputLanguageModel.logProbWordGivenSentence(feature, this.outputLanguageModel.dataset[i])
 				);
 		}
-		//console.dir(logProducts);
 		var logSentenceLikelihood = logSumExp(logProducts);
 		
 		return logSentenceLikelihood - Math.log(this.inputLanguageModel.dataset.length); // The last element is not needed in practice (see eq. (5))
 	},
+	
+	toJSON: function() {
+		return {
+			inputLanguageModel: this.inputLanguageModel.toJSON(),
+			outputLanguageModel: this.outputLanguageModel.toJSON(),
+		};
+	},
+	
+	fromJSON: function(json) {
+		this.inputLanguageModel.fromJSON(json.inputLanguageModel);
+		this.outputLanguageModel.fromJSON(json.outputLanguageModel);
+	}
 }
 
 

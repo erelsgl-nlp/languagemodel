@@ -1,7 +1,7 @@
 {
     "name": "languagemodel",
     "description": "A natural language model and cross-language model, for natural language understanding and generation",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "Erel Segal-haLevi <erelsgl@gmail.com>",
     "repository": {
         "type": "git",
@@ -10,5 +10,8 @@
     "main": "./index.js",
     "dependencies" : {  },
     "devDependencies" : { },
+    "scripts": {
+        "test": "mocha"
+   	}, 
     "keywords": ["natural language", "natural", "language model"]
 }

@@ -103,6 +103,8 @@ LanguageModel.prototype = {
 	 * @return the (smoothed) probability that the word appears in the sentence.
 	 */
 	logProbWordGivenSentence: function(word, givenSentenceCounts) {  // (3) p_s(w) =~ pi_s(w) = ...
+		if (givenSentenceCounts!==Object(givenSentenceCounts))
+			throw new Error("expected givenSentenceCounts to be an object, but found "+JSON.stringify(givenSentenceCounts));
 		var totalGivenSentenceCounts = ("_total" in givenSentenceCounts?
 				givenSentenceCounts["_total"]:
 				Object.keys(givenSentenceCounts).
@@ -120,6 +122,22 @@ LanguageModel.prototype = {
 			throw new Error("logProbWordGivenSentence("+word+", "+JSON.stringify(givenSentenceCounts)+") is NaN!");
 		}
 		return Math.log(prob);
+	},
+	
+	toJSON: function() {
+		return {
+			mapWordToTotalCount: this.mapWordToTotalCount,
+			mapWordToSmoothingFactor: this.mapWordToSmoothingFactor,
+			globalSmoothingFactor: this.globalSmoothingFactor,
+			dataset: this.dataset,
+		};
+	},
+
+	fromJSON: function() {
+		this.mapWordToTotalCount = mapWordToTotalCount;
+		this.mapWordToSmoothingFactor = mapWordToSmoothingFactor;
+		this.globalSmoothingFactor = globalSmoothingFactor;
+		this.dataset = dataset;
 	},
 }
 
