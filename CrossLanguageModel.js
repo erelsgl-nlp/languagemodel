@@ -46,6 +46,8 @@ CrossLanguageModel.prototype = {
 	trainBatch : function(dataset) {
 		this.inputLanguageModel.trainBatch(dataset.map(function(datum) {return datum.input;}));
 		this.outputLanguageModel.trainBatch(dataset.map(function(datum) {return datum.output;}));
+		this.outputFeatures = extend({}, this.outputLanguageModel.getAllWordCounts());
+		delete this.outputFeatures["_total"];
 	},
 
 	/**
@@ -73,24 +75,21 @@ CrossLanguageModel.prototype = {
 	 * @note divergence is not symmetric - divergence(a,b) != divergence(b,a).
 	 */
 	divergence: function(inputSentenceCounts, outputSentenceCounts) {         // (6)   D(P(W)||P(F)) = ...
-		var elements = [];
-		if (inputSentenceCounts!==Object(inputSentenceCounts))
-			throw new Error("expected inputSentenceCounts to be an object, but found "+JSON.stringify(inputSentenceCounts));
-		if (outputSentenceCounts!==Object(outputSentenceCounts))
-			throw new Error("expected outputSentenceCounts to be an object, but found "+JSON.stringify(outputSentenceCounts));
-		for (var feature in this.outputLanguageModel.getAllWordCounts()) {
-			if (feature=='_total') continue;
+		var elements = [];   // elements for summation
+//		if (inputSentenceCounts!==Object(inputSentenceCounts))
+//			throw new Error("expected inputSentenceCounts to be an object, but found "+JSON.stringify(inputSentenceCounts));
+//		if (outputSentenceCounts!==Object(outputSentenceCounts))
+//			throw new Error("expected outputSentenceCounts to be an object, but found "+JSON.stringify(outputSentenceCounts));
+		for (var feature in this.outputFeatures) {
 			var logFeatureGivenInput  = this.logProbFeatureGivenSentence(feature, inputSentenceCounts);
-			if (isNaN(logFeatureGivenInput)||!isFinite(logFeatureGivenInput)) throw new Error("logFeatureGivenInput is "+logFeatureGivenInput);
-			var logFeatureGivenOutput = this.outputLanguageModel.logProbWordGivenSentence(feature, outputSentenceCounts);
-			if (isNaN(logFeatureGivenOutput)||!isFinite(logFeatureGivenOutput)) throw new Error("logFeatureGivenOutput ("+feature+", "+outputSentenceCounts+") is "+logFeatureGivenOutput);
+//			if (isNaN(logFeatureGivenInput)||!isFinite(logFeatureGivenInput)) throw new Error("logFeatureGivenInput is "+logFeatureGivenInput);
 			var probFeatureGivenInput = Math.exp(logFeatureGivenInput);
+			var logFeatureGivenOutput = this.outputLanguageModel.logProbWordGivenSentence(feature, outputSentenceCounts);
+//			if (isNaN(logFeatureGivenOutput)||!isFinite(logFeatureGivenOutput)) throw new Error("logFeatureGivenOutput ("+feature+", "+outputSentenceCounts+") is "+logFeatureGivenOutput);
 			var element = probFeatureGivenInput * (logFeatureGivenInput - logFeatureGivenOutput);
-			if (isNaN(element)||!isFinite(element)) throw new Error(probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
-			//console.log("\t(6) "+feature+": "+probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
+//			if (isNaN(element)||!isFinite(element)) throw new Error(probFeatureGivenInput+" * ("+logFeatureGivenInput+" - "+logFeatureGivenOutput+") = "+element);
 			elements.push(element)
 		}
-		//console.dir(elements);
 		return elements.reduce(function(memo, num){ return memo + num; }, 0);
 	},
 	
