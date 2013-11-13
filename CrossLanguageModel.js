@@ -75,6 +75,8 @@ CrossLanguageModel.prototype = {
 	 * @note divergence is not symmetric - divergence(a,b) != divergence(b,a).
 	 */
 	divergence: function(inputSentenceCounts, outputSentenceCounts) {         // (6)   D(P(W)||P(F)) = ...
+		if (outputSentenceCounts!==Object(outputSentenceCounts))
+			throw new Error("expected outputSentenceCounts to be an object, but found "+JSON.stringify(outputSentenceCounts));
 		var elements = [];   // elements for summation
 //		if (inputSentenceCounts!==Object(inputSentenceCounts))
 //			throw new Error("expected inputSentenceCounts to be an object, but found "+JSON.stringify(inputSentenceCounts));
