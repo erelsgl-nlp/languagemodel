@@ -1,7 +1,7 @@
 {
     "name": "languagemodel",
     "description": "A natural language model and cross-language model, for natural language understanding and generation",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "author": "Erel Segal-haLevi <erelsgl@gmail.com>",
     "repository": {
         "type": "git",
