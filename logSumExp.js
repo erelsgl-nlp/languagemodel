@@ -5,7 +5,9 @@
  * @return log(sum[i=1..n](exp(ai))) = 
  *         m + log(sum[i=1..n](exp(ai-m)))
  * Where m = max[i=1..n](ai)
- * @note handles large numbers robustly.        
+ * 
+ * @note handles large numbers robustly.
+ * @see "The log-sum-exp trick": http://machineintelligence.tumblr.com/post/4998477107/the-log-sum-exp-trick
  */
 module.exports = function(a) {
 	var m = Math.max.apply(null, a);
