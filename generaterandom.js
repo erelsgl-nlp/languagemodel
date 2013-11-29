@@ -1,8 +1,7 @@
 /**
- * Simple calculation of word-counts in a sentence. 
- * @param sentence
- * @return a hash {word1: count1, word2: count2,...}
- * words are separated by spaces.
+ * Generating random string with given number of words
+ * @param length - leght of random string
+ * @return a random string
  */
 module.exports = function(length) {
 	var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz';
