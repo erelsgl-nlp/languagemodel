@@ -1,6 +1,6 @@
 /**
  * Generating random string with given number of words
- * @param length - leght of random string
+ * @param length - length of random string
  * @return a random string
  */
 module.exports = function(length) {
