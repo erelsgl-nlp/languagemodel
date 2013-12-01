@@ -8,20 +8,29 @@
 var CrossLanguageModel = require('../CrossLanguageModel');
 var wordcounts = require('../wordcounts');
 var assert = require('assert');
+var random = require('./generaterandom');
+var should = require('should');
 
 describe('Cross-Language Model', function() {
 
 	var model = new CrossLanguageModel({
-		smoothingFactor : 0.9,
+		smoothingCoefficient : 0.9,
 	});
 
-	model.trainBatch([
+	it('produces predictable probabilities', function() {
+		model.smoothingCoefficient = 1
+		str = random.random_string(20)
+		model.trainBatch([{input: wordcounts(str), output: wordcounts(str)}])
+	    model.divergence(wordcounts(str), wordcounts(str)).should.be.approximately(0, 0.0001);
+		});
+
+	it('produces predictable probabilities', function() {
+
+		model.trainBatch([
 		{input: wordcounts("I want aa"), output: wordcounts("a")},
 		{input: wordcounts("I want bb"), output: wordcounts("b")},
 		{input: wordcounts("I want cc"), output: wordcounts("c")},
 		]);
-
-	it('produces predictable probabilities', function() {
 
 		var assertProbSentence = function(actual, expected) {
 			if (Math.abs(actual-expected)/expected>0.01)
