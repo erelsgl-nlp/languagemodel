@@ -7,7 +7,7 @@
 
 var LanguageModel = require('../LanguageModel');
 var wordcounts = require('../wordcounts');
-var generaterandom = require('../generaterandom');
+var random = require('./generaterandom');
 var should = require('should');
 
 describe('Language Model', function() {
@@ -22,7 +22,7 @@ describe('Language Model', function() {
 			throw new Error("p("+sentence+") = "+p+" should be "+expected);
 	}
 
-	random_string = generaterandom(15)
+	random_string = random.random_string(15)
 	
 	it('Probabilities of all words of the sentence given the sentence converges to 2 ', function() {	
 		str = random_string

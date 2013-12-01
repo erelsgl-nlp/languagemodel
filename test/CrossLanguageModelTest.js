@@ -8,7 +8,7 @@
 var CrossLanguageModel = require('../CrossLanguageModel');
 var wordcounts = require('../wordcounts');
 var assert = require('assert');
-var generaterandom = require('../generaterandom');
+var random = require('./generaterandom');
 var should = require('should');
 
 describe('Cross-Language Model', function() {
@@ -19,7 +19,7 @@ describe('Cross-Language Model', function() {
 
 	it('produces predictable probabilities', function() {
 		model.smoothingCoefficient = 1
-		str = generaterandom(20)
+		str = random.random_string(20)
 		model.trainBatch([{input: wordcounts(str), output: wordcounts(str)}])
 	    model.divergence(wordcounts(str), wordcounts(str)).should.be.approximately(0, 0.0001);
 		});
