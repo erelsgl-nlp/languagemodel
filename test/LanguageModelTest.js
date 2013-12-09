@@ -9,6 +9,7 @@ var LanguageModel = require('../LanguageModel');
 var wordcounts = require('../wordcounts');
 var random = require('./generaterandom');
 var should = require('should');
+var _ = require('underscore');
 
 describe('Language Model', function() {
 	
@@ -27,8 +28,12 @@ describe('Language Model', function() {
 	it('Probabilities of all words of the sentence given the sentence converges to 2 ', function() {	
 		str = random_string
 		
+		dataset = []
+		
+		_.times(10000, function(n){dataset.push(wordcounts(random_string))})
+		
 		model.smoothingCoefficient = 1
-		model.trainBatch([wordcounts(str)])
+		model.trainBatch(dataset)
 
 		str = str.split(" ")
 
@@ -37,7 +42,7 @@ describe('Language Model', function() {
 		{
 			prob += Math.exp(model.logProbWordGivenSentence(str[word], wordcounts(str.join(" "))))
 		}
-		prob.should.be.approximately(2, 0.1);
+		prob.should.be.approximately(1, 0.0001);
 	});
 
 	it('Probabilities of a sentence given sentence should be properly combined from the probabilities of words given sentence ', function() {
@@ -48,6 +53,7 @@ describe('Language Model', function() {
 	
 		str = str.split(" ")
 		 
+		//?
 		var prob = Math.exp(model.logProbSentenceGivenSentence(wordcounts(str.join(" ")),wordcounts(str.join(" "))))
 
 		var prob1 = 1
@@ -55,8 +61,9 @@ describe('Language Model', function() {
 		{
 			prob1 *= Math.exp(model.logProbWordGivenSentence(str[word], wordcounts(str.join(" "))))
 		}
-		  
-		prob.should.be.approximately(prob1, 0.0001);
+		 
+		ratio = prob/prob1
+		ratio.should.be.approximately(1, 0.0001);
 	});
 
 	it('Probabilities of a sentence given a dataset should be properly combined from the probabilities of a sentence given a sentence', function() {
@@ -76,6 +83,7 @@ describe('Language Model', function() {
 		}
 		  
 		prob.should.be.approximately(prob1, 0.0001);
+		//try to usethe same sentece 10 times in the dataset
 	});
 
 	it('produces predictable probabilities', function() {
