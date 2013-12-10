@@ -20,8 +20,11 @@ describe('Cross-Language Model', function() {
 	it('produces predictable probabilities', function() {
 		model.smoothingCoefficient = 1
 		str = random.random_string(20)
-		model.trainBatch([{input: wordcounts(str), output: wordcounts(str)}])
-	    model.divergence(wordcounts(str), wordcounts(str)).should.be.approximately(0, 0.0001);
+		str1 = random.random_string(20)
+		model.trainBatch([{input: wordcounts(str), output: wordcounts(str1)}])
+	    model.divergence(wordcounts(str), wordcounts(str1)).should.be.approximately(0, 0.0001);
+
+//negative check
 		});
 
 	it('produces predictable probabilities', function() {

@@ -8,7 +8,9 @@
         "url": "https://github.com/erelsgl/languagemodel.git"
     },
     "main": "./index.js",
-    "dependencies" : {  },
+    "dependencies" : {  
+        "underscore": "*"
+        },
     "devDependencies" : { 
         "should": ">=0.6.0"
     },
